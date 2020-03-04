@@ -1,0 +1,8 @@
+name: story_manager
+dependencies:
+  - pandas
+  - xlrd
+  - xlsxwriter
+  - jupyter
+  - black
+  - flake8
