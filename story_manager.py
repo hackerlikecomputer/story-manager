@@ -1,4 +1,3 @@
-# %%
 from datetime import datetime
 import json
 import os
@@ -140,6 +139,7 @@ def cleanup(df):
 
 def auto_fit_columns(df, sheet):
     for i, col in enumerate(df.columns):
+        i = i + 1
         if col == "path":
             sheet.set_column(i, i, 10)
         else:
