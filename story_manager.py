@@ -4,15 +4,26 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 import pandas as pd
 
 
 def load_data(s):
     f = s["project_dir"] / "stories.xlsx"
     if os.path.exists(f):
-        df = pd.read_excel(f, index_col=0)
+        status = "not loaded"
+        while status == "not loaded":
+            try:
+                df = pd.read_excel(f, index_col=0)
+            except PermissionError:
+                time.sleep(10)
+            else:
+                status = "loaded"
     else:
-        df = pd.DataFrame({"slug": [], "start_date": [], "mtime": [], "path": []})
+        df = pd.DataFrame(
+            {"slug": [], "category": [], "start_date": [], "mtime": [], "path": []}
+        )
+
     return df
 
 
@@ -74,20 +85,32 @@ def get_index_by_slug(slug, df):
     return index
 
 
-def update_existing(df, slug, start_date, mtime, path):
+def update_existing(df, slug, category, start_date, mtime, path):
     index = get_index_by_slug(slug, df)
-    row = {"slug": slug, "start_date": start_date, "mtime": mtime, "path": path}
+    row = {
+        "slug": slug,
+        "category": category,
+        "start_date": start_date,
+        "mtime": mtime,
+        "path": path,
+    }
     for colname in row:
         df.at[index, colname] = row[colname]
     return df
 
 
-def update_data(df, slug, start_date, mtime, path):
+def update_data(df, slug, category, start_date, mtime, path):
     if record_exists(slug, df):
-        df = update_existing(df, slug, start_date, mtime, path)
+        df = update_existing(df, slug, category, start_date, mtime, path)
     else:
         df = df.append(
-            {"slug": slug, "start_date": start_date, "mtime": mtime, "path": path},
+            {
+                "slug": slug,
+                "category": category,
+                "start_date": start_date,
+                "mtime": mtime,
+                "path": path,
+            },
             ignore_index=True,
         )
     return df
@@ -100,10 +123,11 @@ def update_all(df, s):
                 for story_dir in os.listdir(s["project_dir"] / cat_dir):
                     if not ignore_dir(story_dir, s):
                         slug = get_story_slug(story_dir)
+                        category = cat_dir
                         start_date = get_start_date(story_dir)
                         mtime = get_mtime(s["project_dir"] / cat_dir / story_dir)
                         path = s["project_dir"] / cat_dir / story_dir
-                        df = update_data(df, slug, start_date, mtime, path)
+                        df = update_data(df, slug, category, start_date, mtime, path)
     return df
 
 
@@ -115,14 +139,18 @@ def cleanup(df):
 
 
 def auto_fit_columns(df, sheet):
-    df = df.reset_index()
-    for i, col in enumerate(df):
+    for i, col in enumerate(df.columns):
         if col == "path":
             sheet.set_column(i, i, 10)
         else:
             s = df[col]
             max_len = max(s.astype(str).map(len).max(), len(str(s.name))) + 1
             sheet.set_column(i, i, max_len)
+
+
+def sort(df):
+    df = df.sort_values("mtime", ascending=True).reset_index(drop=True)
+    return df
 
 
 def save(df, s):
@@ -138,6 +166,7 @@ def _main():
     df = load_data(s)
     df = update_all(df, s)
     df = cleanup(df)
+    df = sort(df)
     save(df, s)
 
 
