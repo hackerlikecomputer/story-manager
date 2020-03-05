@@ -358,6 +358,7 @@ class StoryManager:
                 writer.save()
                 status = "ran"
             except FileCreateError:
+                print(f"{datetime.now()} Spreadsheet is open")
                 time.sleep(5)
                 continue
 
@@ -384,6 +385,7 @@ class Handler(FileSystemEventHandler):
         elif event.event_type in ["moved", "deleted", "created", "modified"]:
             manager = StoryManager()
             manager.run()
+            print(f"{datetime.now()} Ran after recording file {event.event_type} event")
 
 
 class Watcher:
@@ -394,6 +396,7 @@ class Watcher:
         self.observer = Observer()
 
     def run(self):
+        print("running")
         handler = Handler()
         self.observer.schedule(handler, self.watch_directory, recursive=True)
         self.observer.start()
