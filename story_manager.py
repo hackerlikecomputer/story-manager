@@ -20,7 +20,14 @@ def load_data(s):
                 status = "loaded"
     else:
         df = pd.DataFrame(
-            {"slug": [], "category": [], "start_date": [], "mtime": [], "path": []}
+            {
+                "slug": [],
+                "category": [],
+                "start_date": [],
+                "mtime": [],
+                "status": [],
+                "path": [],
+            }
         )
 
     return df
@@ -66,6 +73,17 @@ def get_mtime(dir):
     )
 
 
+def get_status(dir):
+    if isinstance(dir, str):
+        dir = Path(dir)
+    if not os.path.exists(dir / ".status"):
+        raise ValueError(f"Missing status file in folder {dir}")
+    else:
+        with open(dir / ".status", "r") as f:
+            status = f.read()
+        return status
+
+
 def record_exists(slug, df):
     if slug in df["slug"].tolist():
         return True
@@ -84,13 +102,14 @@ def get_index_by_slug(slug, df):
     return index
 
 
-def update_existing(df, slug, category, start_date, mtime, path):
+def update_existing(df, slug, category, start_date, mtime, status, path):
     index = get_index_by_slug(slug, df)
     row = {
         "slug": slug,
         "category": category,
         "start_date": start_date,
         "mtime": mtime,
+        "status": status,
         "path": path,
     }
     for colname in row:
@@ -98,9 +117,9 @@ def update_existing(df, slug, category, start_date, mtime, path):
     return df
 
 
-def update_data(df, slug, category, start_date, mtime, path):
+def update_data(df, slug, category, start_date, mtime, status, path):
     if record_exists(slug, df):
-        df = update_existing(df, slug, category, start_date, mtime, path)
+        df = update_existing(df, slug, category, start_date, mtime, status, path)
     else:
         df = df.append(
             {
@@ -108,6 +127,7 @@ def update_data(df, slug, category, start_date, mtime, path):
                 "category": category,
                 "start_date": start_date,
                 "mtime": mtime,
+                "status": status,
                 "path": path,
             },
             ignore_index=True,
@@ -125,8 +145,11 @@ def update_all(df, s):
                         category = cat_dir
                         start_date = get_start_date(story_dir)
                         mtime = get_mtime(s["project_dir"] / cat_dir / story_dir)
+                        status = get_status(s["project_dir"] / cat_dir / story_dir)
                         path = s["project_dir"] / cat_dir / story_dir
-                        df = update_data(df, slug, category, start_date, mtime, path)
+                        df = update_data(
+                            df, slug, category, start_date, mtime, status, path
+                        )
     return df
 
 
