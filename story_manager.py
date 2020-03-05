@@ -5,10 +5,21 @@ import os
 from pathlib import Path
 import re
 import time
+import warnings
 import pandas as pd
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from win10toast import ToastNotifier
+from xlsxwriter.exceptions import FileCreateError
+
+
+class StoryManagerWarning(Warning):
+    """sends warnings to windows 10 toast notifications"""
+
+    def __init__(self, msg):
+        super().__init__(msg)
+        self.n = ToastNotifier()
+        self.n.show_toast("Story Manager Warning", msg)
 
 
 class StoryManagerException(Exception):
@@ -86,9 +97,13 @@ class StoryManager:
         pat = re.compile(r"(?<=\d\d\d\d-\d\d-\d\d\s).*")
         m = pat.search(dirname)
         if m:
-            return m.group().strip()
+            slug = m.group().strip()
         else:
-            raise StoryManagerException(f"Unable to get story slug from name {dirname}")
+            slug = None
+            warnings.warn(
+                f"Unable to get story slug from name {dirname}", StoryManagerWarning
+            )
+        return slug
 
     def get_start_date(self, dirname):
         """
@@ -134,7 +149,7 @@ class StoryManager:
         if isinstance(dir, str):
             dir = Path(dir)
         if not os.path.exists(dir / ".status"):
-            raise StoryManagerException(f"Missing status file in folder {dir}")
+            status = None
         else:
             with open(dir / ".status", "r") as f:
                 status = f.read()
@@ -308,7 +323,7 @@ class StoryManager:
         """
         sort dataframe by mtime
 
-        args: 
+        args:
             df (DataFrame): dataframe to sort
 
         returns: DataFrame
@@ -321,19 +336,31 @@ class StoryManager:
         """
         save and format excel file
 
-        args: 
+        args:
             df (DataFrame): dataframe to save
 
         returns: None
         """
 
-        writer = pd.ExcelWriter(
-            self.s["project_dir"] / "stories.xlsx", engine="xlsxwriter"
-        )
-        df.to_excel(writer, sheet_name="active", index=True)
-        sheet = writer.sheets["active"]
-        self.auto_fit_columns(df, sheet)
-        writer.save()
+        n_retries = 0
+        while n_retries < 10:
+            try:
+                writer = pd.ExcelWriter(
+                    self.s["project_dir"] / "stories.xlsx", engine="xlsxwriter"
+                )
+                df.to_excel(writer, sheet_name="active", index=True)
+                sheet = writer.sheets["active"]
+                self.auto_fit_columns(df, sheet)
+                writer.save()
+                break
+            except FileCreateError:
+                warnings.warn("trying to save but file is open", StoryManagerWarning)
+                n_retries += 1
+                time.sleep(5)
+        else:
+            raise StoryManagerException(
+                f"Unable to save file. Please close the file and try again"
+            )
 
     def run(self):
         df = self.load_data()
@@ -369,7 +396,7 @@ class Watcher:
                 time.sleep(5)
         except Exception:
             self.observer.stop()
-            raise
+            raise StoryManagerException(f"Story manager crashed")
         self.observer.join()
 
 
