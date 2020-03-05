@@ -6,8 +6,8 @@ from pathlib import Path
 import re
 import time
 import pandas as pd
-# from watchdog.observers import Observer
-# from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from win10toast import ToastNotifier
 
 
@@ -195,9 +195,39 @@ class StoryManager:
         self.save(df)
 
 
+class Handler(FileSystemEventHandler):
+    @staticmethod
+    def on_any_event(event):
+        if event.is_directory:
+            return None
+        elif event.event_type in ["moved", "deleted", "created", "modified"]:
+            manager = StoryManager()
+            manager.run()
+
+
+class Watcher:
+    def __init__(self):
+        self.watch_directory = (
+            "C:\\Users\\cmhack0114\\OneDrive - CBS Corporation\\Stories\\Active"
+        )
+        self.observer = Observer()
+
+    def run(self):
+        handler = Handler()
+        self.observer.schedule(handler, self.watch_directory, recursive=True)
+        self.observer.start()
+        try:
+            while True:
+                time.sleep(5)
+        except Exception:
+            self.observer.stop()
+            raise
+        self.observer.join()
+
+
 def _main():
-    story_manager = StoryManager()
-    story_manager.run()
+    watcher = Watcher()
+    watcher.run()
 
 
 if __name__ == "__main__":

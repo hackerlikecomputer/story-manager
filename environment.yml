@@ -8,4 +8,5 @@ dependencies:
   - flake8
   - pip
   - pip:
+      - watchdog
       - win10toast
