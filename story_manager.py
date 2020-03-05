@@ -38,11 +38,12 @@ class StoryManager:
         with open("settings.json", "r") as f:
             self.s = json.load(f)
         self.s["project_dir"] = Path(self.s["project_dir"])
+        self.spreadsheet = self.s["project_dir"] / "stories.xlsx"
 
     def load_data(self):
         """loads the existing data, or creates an empty DataFrame"""
 
-        f = self.s["project_dir"] / "stories.xlsx"
+        f = self.spreadsheet
         if os.path.exists(f):
             status = "not loaded"
             while status == "not loaded":
@@ -347,9 +348,7 @@ class StoryManager:
         status = "not ran"
         while status == "not ran":
             try:
-                writer = pd.ExcelWriter(
-                    self.s["project_dir"] / "stories.xlsx", engine="xlsxwriter"
-                )
+                writer = pd.ExcelWriter(self.spreadsheet, engine="xlsxwriter")
                 df.to_excel(writer, sheet_name="active", index=True)
                 sheet = writer.sheets["active"]
                 self.auto_fit_columns(df, sheet)
@@ -359,12 +358,19 @@ class StoryManager:
                 time.sleep(5)
                 continue
 
+    def check_save(self):
+        fsize = os.path.getsize(self.spreadsheet)
+        if fsize == 0:
+            os.remove(self.spreadsheet)
+            self.run()
+
     def run(self):
         df = self.load_data()
         df = self.update_all(df)
         df = self.cleanup(df)
         df = self.sort(df)
         self.save(df)
+        self.check_save()
 
 
 class Handler(FileSystemEventHandler):
