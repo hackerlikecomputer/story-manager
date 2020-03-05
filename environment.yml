@@ -6,3 +6,6 @@ dependencies:
   - jupyter
   - black
   - flake8
+  - pip
+  - pip:
+      - win10toast

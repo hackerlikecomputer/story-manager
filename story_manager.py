@@ -5,6 +5,14 @@ from pathlib import Path
 import re
 import time
 import pandas as pd
+from win10toast import ToastNotifier
+
+
+class StoryManagerException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+        self.n = ToastNotifier()
+        self.n.show_toast("Story manager threw an error!", msg)
 
 
 def load_data(s):
@@ -55,7 +63,7 @@ def get_story_slug(dirname):
     if m:
         return m.group().strip()
     else:
-        raise ValueError(f"Unable to get story slug from name {dirname}")
+        raise StoryManagerException(f"Unable to get story slug from name {dirname}")
 
 
 def get_start_date(dirname):
@@ -64,7 +72,7 @@ def get_start_date(dirname):
     if m:
         return m.group()
     else:
-        raise ValueError(f"cannot get start date from name {dirname}")
+        raise StoryManagerException(f"cannot get start date from name {dirname}")
 
 
 def get_mtime(dir):
@@ -77,7 +85,7 @@ def get_status(dir):
     if isinstance(dir, str):
         dir = Path(dir)
     if not os.path.exists(dir / ".status"):
-        raise ValueError(f"Missing status file in folder {dir}")
+        raise StoryManagerException(f"Missing status file in folder {dir}")
     else:
         with open(dir / ".status", "r") as f:
             status = f.read()
@@ -94,11 +102,11 @@ def record_exists(slug, df):
 def get_index_by_slug(slug, df):
     s = df[df["slug"] == slug].index
     if len(s) > 1:
-        raise ValueError(f"found multple records for folder for {slug}")
+        raise StoryManagerException(f"found multple records for folder for {slug}")
     try:
         index = s[0]
     except KeyError:
-        raise KeyError(f"expected index for slug {slug}")
+        raise StoryManagerException(f"expected index for slug {slug}")
     return index
 
 
