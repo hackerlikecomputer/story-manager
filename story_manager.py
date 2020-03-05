@@ -35,7 +35,10 @@ class StoryManager:
     """watches project directory for changes and updates stories spreadsheet"""
 
     def __init__(self):
-        with open("settings.json", "r") as f:
+        with open(
+            "C:\\Users\\cmhack0114\\Documents\\GitHub\\story-manager\\settings.json",
+            "r",
+        ) as f:
             self.s = json.load(f)
         self.s["project_dir"] = Path(self.s["project_dir"])
         self.spreadsheet = self.s["project_dir"] / "stories.xlsx"
