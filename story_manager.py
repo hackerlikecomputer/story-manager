@@ -105,22 +105,22 @@ class StoryManager:
             )
         return slug
 
-    def get_start_date(self, dirname):
+    def get_ctime(self, dir):
         """
-        get the start date of the story from the folder name
+        get the start date of the story from the folder
 
         args:
-            dirname (str): name of directory to check
+            dirname (str): full path to folder
 
         returns: str
         """
 
-        pat = re.compile(r"\d\d\d\d-\d\d-\d\d(?=\s\w+)")
-        m = pat.search(dirname)
-        if m:
-            return m.group()
+        try:
+            ctime = datetime.fromtimestamp(os.path.getctime(dir))
+        except Exception:
+            raise StoryManagerException(f"cannot get start date from directory {dir}")
         else:
-            raise StoryManagerException(f"cannot get start date from name {dirname}")
+            return ctime
 
     def get_mtime(self, dir):
         """
@@ -271,7 +271,9 @@ class StoryManager:
                         if not self.ignore_dir(story_dir):
                             slug = self.get_story_slug(story_dir)
                             category = cat_dir
-                            start_date = self.get_start_date(story_dir)
+                            start_date = self.get_ctime(
+                                self.s["project_dir"] / cat_dir / story_dir
+                            )
                             mtime = self.get_mtime(
                                 self.s["project_dir"] / cat_dir / story_dir
                             )
