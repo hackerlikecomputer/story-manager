@@ -344,8 +344,8 @@ class StoryManager:
         returns: None
         """
 
-        n_retries = 0
-        while n_retries < 10:
+        status = "not ran"
+        while status == "not ran":
             try:
                 writer = pd.ExcelWriter(
                     self.s["project_dir"] / "stories.xlsx", engine="xlsxwriter"
@@ -354,15 +354,10 @@ class StoryManager:
                 sheet = writer.sheets["active"]
                 self.auto_fit_columns(df, sheet)
                 writer.save()
-                break
+                status = "ran"
             except FileCreateError:
-                warnings.warn("trying to save but file is open", StoryManagerWarning)
-                n_retries += 1
                 time.sleep(5)
-        else:
-            raise StoryManagerException(
-                f"Unable to save file. Please close the file and try again"
-            )
+                continue
 
     def run(self):
         df = self.load_data()
