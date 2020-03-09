@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import time
 import warnings
+from git import Repo
+from git.exc import InvalidGitRepositoryError
 import pandas as pd
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -64,6 +66,7 @@ class StoryManager:
                     "start_date": [],
                     "mtime": [],
                     "status": [],
+                    "last_commit": [],
                     "path": [],
                 }
             )
@@ -159,6 +162,25 @@ class StoryManager:
                 status = f.read()
             return status
 
+    def get_last_commit(self, dir):
+        """
+        get the last commit message from head
+
+        args:
+            dir (str): directory to check
+
+        returns: str
+        """
+
+        try:
+            repo = Repo(dir)
+        except InvalidGitRepositoryError:
+            return "not a repository"
+        log = repo.head.log()
+        n_commits = len(log)
+        last_commit = log[n_commits - 1]
+        return last_commit.message
+
     def record_exists(self, slug, df):
         """
         check if the story is present in spreadsheet
@@ -195,7 +217,9 @@ class StoryManager:
             raise StoryManagerException(f"expected index for slug {slug}")
         return index
 
-    def update_existing(self, df, slug, category, start_date, mtime, status, path):
+    def update_existing(
+        self, df, slug, category, start_date, mtime, status, last_commit, path
+    ):
         """
         updates an existing record
 
@@ -206,6 +230,7 @@ class StoryManager:
             start_date (str): start date from folder name
             mtime (datetime): last modified date
             status (str): story status
+            last_commit (str): last commit message from head
             path (str): path to story dir
 
         returns: DataFrame
@@ -218,13 +243,16 @@ class StoryManager:
             "start_date": start_date,
             "mtime": mtime,
             "status": status,
+            "last_commit": last_commit,
             "path": path,
         }
         for colname in row:
             df.at[index, colname] = row[colname]
         return df
 
-    def update_data(self, df, slug, category, start_date, mtime, status, path):
+    def update_data(
+        self, df, slug, category, start_date, mtime, status, last_commit, path
+    ):
         """
         updates a record if it exists, or appends a new one
 
@@ -235,6 +263,7 @@ class StoryManager:
             start_date (str): start date from folder name
             mtime (datetime): last modified date
             status (str): story status
+            last_commit (str): last commit message from head
             path (str): path to story dir
 
         returns: DataFrame
@@ -242,7 +271,7 @@ class StoryManager:
 
         if self.record_exists(slug, df):
             df = self.update_existing(
-                df, slug, category, start_date, mtime, status, path
+                df, slug, category, start_date, mtime, status, last_commit, path
             )
         else:
             df = df.append(
@@ -252,6 +281,7 @@ class StoryManager:
                     "start_date": start_date,
                     "mtime": mtime,
                     "status": status,
+                    "last_commit": last_commit,
                     "path": path,
                 },
                 ignore_index=True,
@@ -273,20 +303,22 @@ class StoryManager:
                 if not self.ignore_dir(cat_dir):
                     for story_dir in os.listdir(self.s["project_dir"] / cat_dir):
                         if not self.ignore_dir(story_dir):
+                            d = self.s["project_dir"] / cat_dir / story_dir
                             slug = self.get_story_slug(story_dir)
                             category = cat_dir
-                            start_date = self.get_ctime(
-                                self.s["project_dir"] / cat_dir / story_dir
-                            )
-                            mtime = self.get_mtime(
-                                self.s["project_dir"] / cat_dir / story_dir
-                            )
-                            status = self.get_status(
-                                self.s["project_dir"] / cat_dir / story_dir
-                            )
-                            path = self.s["project_dir"] / cat_dir / story_dir
+                            start_date = self.get_ctime(d)
+                            mtime = self.get_mtime(d)
+                            status = self.get_status(d)
+                            last_commit = self.get_last_commit(d)
                             df = self.update_data(
-                                df, slug, category, start_date, mtime, status, path
+                                df,
+                                slug,
+                                category,
+                                start_date,
+                                mtime,
+                                status,
+                                last_commit,
+                                d,
                             )
         return df
 
