@@ -1,0 +1,7 @@
+# Story Manager
+
+I'm often working on many long-term projects simultaneously. When dealing with 10+ stories that rely on numerous FOIA requests, web scrapers, data analysis and more, it can be difficult to keep track of all those moving parts. Existing tools like trello are okay, but are more geared towards collaboration and require me to manually update something when I make a change. 
+
+Enter `story_manager`. I already use git to manage any project that takes more than a day or two to report, and am very organized about how I store my files, so I really just needed something to keep an eye on my story directory and track my changes. `story_manager` looks for changes in git repositories within wahtever folder you tell it to watch, and updates a spreadsheet that has the slug of the story, when it was created, when it was last modified, the last commit message and a special status, which I define by putting a `.status` file in the root directory of each project. This requires minimal day-to-day work on my part while giving me a nice spreadsheet automatically sorted by when stories were last updated. 
+
+It runs automatically with a scheduled windows task on log in. Feel free to use this code yourself -- just edit the settings file and schedule the task.
