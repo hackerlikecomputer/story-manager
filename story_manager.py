@@ -377,15 +377,35 @@ class StoryManager:
         self.check_save()
 
 
+def is_head_log(event):
+    """
+    whether the checked file is the repo HEAD log
+
+    args:
+        event (FileSystemHandler event): event to check
+
+    returns: bool
+    """
+
+    if event.src_path.endswith("HEAD"):
+        return True
+    else:
+        return False
+
+
 class Handler(FileSystemEventHandler):
     @staticmethod
     def on_any_event(event):
-        if event.is_directory:
-            return None
-        elif event.event_type in ["moved", "deleted", "created", "modified"]:
-            manager = StoryManager()
-            manager.run()
-            print(f"{datetime.now()} Ran after recording file {event.event_type} event")
+        if is_head_log(event):
+            if event.is_directory:
+                return None
+            elif event.event_type in ["moved", "deleted", "created", "modified"]:
+                manager = StoryManager()
+                manager.run()
+                print(
+                    f"{datetime.now()} Ran after recording file "
+                    f"{event.event_type} event"
+                )
 
 
 class Watcher:

@@ -10,3 +10,4 @@ dependencies:
   - pip:
       - watchdog
       - win10toast
+      - GitPython
